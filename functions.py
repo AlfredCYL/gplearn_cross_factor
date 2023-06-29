@@ -6,13 +6,13 @@ own custom functions.
 """
 
 import numpy as np
-import pandas as pd
 from joblib import wrap_non_picklable_objects
 
 __all__ = ['make_function']
 
 
 class _Function(object):
+
     """A representation of a mathematical relationship, a node in a program.
 
     This object is able to be called with NumPy vectorized arguments and return
@@ -33,27 +33,13 @@ class _Function(object):
 
     """
 
-    def __init__(self, function, name, arity,isRandom=(False,(1,100))):
+    def __init__(self, function, name, arity):
         self.function = function
         self.name = name
         self.arity = arity
 
-        self.isRandom = isRandom[0]
-
-        self.RandRange = isRandom[1]
-        if (not isinstance(self.RandRange,tuple)) or (not isinstance(self.RandRange[0],int)) or (not isinstance(self.RandRange[1],int)) or len(self.RandRange)!=2:
-            raise TypeError("RandRange 格式错误，应该是类似(1,100)的tuple")
-        self.baseConst = -1
-
-
-
     def __call__(self, *args):
-        if self.isRandom and self.baseConst>0:
-            if len(args)>1 and isinstance(args[-1],int):
-                return self.function(*args)
-            return self.function(*args,self.baseConst)
-        else:
-            return self.function(*args)
+        return self.function(*args)
 
 
 def make_function(*, function, name, arity, wrap=True):
@@ -153,44 +139,40 @@ def _protected_inverse(x1):
     with np.errstate(divide='ignore', invalid='ignore'):
         return np.where(np.abs(x1) > 0.001, 1. / x1, 0.)
 
+
 def _sigmoid(x1):
     """Special case of logistic function to transform to probabilities."""
     with np.errstate(over='ignore', under='ignore'):
         return 1 / (1 + np.exp(-x1))
 
 
-add2 = _Function(function=np.add, name='common_add', arity=2)
-sub2 = _Function(function=np.subtract, name='common_sub', arity=2)
-mul2 = _Function(function=np.multiply, name='common_mul', arity=2)
-abs1 = _Function(function=np.abs, name='common_abs', arity=1)
-neg1 = _Function(function=np.negative, name='common_neg', arity=1)
-inv1 = _Function(function=_protected_inverse, name='common_inv', arity=1)
-max2 = _Function(function=np.maximum, name='common_max', arity=2)
-min2 = _Function(function=np.minimum, name='common_min', arity=2)
-sin1 = _Function(function=np.sin, name='common_sin', arity=1)
-cos1 = _Function(function=np.cos, name='common_cos', arity=1)
-tan1 = _Function(function=np.tan, name='common_tan', arity=1)
-sig1 = _Function(function=_sigmoid, name='common_sig', arity=1)
-div2 = _Function(function=_protected_division, name='common_div', arity=2)
-sqrt1 = _Function(function=_protected_sqrt, name='common_sqrt', arity=1)
-log1 = _Function(function=_protected_log, name='common_log', arity=1)
+add2 = _Function(function=np.add, name='add', arity=2)
+sub2 = _Function(function=np.subtract, name='sub', arity=2)
+mul2 = _Function(function=np.multiply, name='mul', arity=2)
+div2 = _Function(function=_protected_division, name='div', arity=2)
+sqrt1 = _Function(function=_protected_sqrt, name='sqrt', arity=1)
+log1 = _Function(function=_protected_log, name='log', arity=1)
+neg1 = _Function(function=np.negative, name='neg', arity=1)
+inv1 = _Function(function=_protected_inverse, name='inv', arity=1)
+abs1 = _Function(function=np.abs, name='abs', arity=1)
+max2 = _Function(function=np.maximum, name='max', arity=2)
+min2 = _Function(function=np.minimum, name='min', arity=2)
+sin1 = _Function(function=np.sin, name='sin', arity=1)
+cos1 = _Function(function=np.cos, name='cos', arity=1)
+tan1 = _Function(function=np.tan, name='tan', arity=1)
+sig1 = _Function(function=_sigmoid, name='sig', arity=1)
 
-
-
-_function_map = {
-    'common_add': add2,
-    'common_sub': sub2,
-    'common_mul': mul2,
-    'common_abs': abs1,
-    'common_neg': neg1,
-    'common_inv': inv1,
-    'common_max': max2,
-    'common_min': min2,
-    'common_sin': sin1,
-    'common_cos': cos1,
-    'common_tan': tan1,
-    'common_sig': sig1,
-    'common_div': div2,
-    'common_sqrt': sqrt1,
-    'common_log': log1,
-}
+_function_map = {'add': add2,
+                 'sub': sub2,
+                 'mul': mul2,
+                 'div': div2,
+                 'sqrt': sqrt1,
+                 'log': log1,
+                 'abs': abs1,
+                 'neg': neg1,
+                 'inv': inv1,
+                 'max': max2,
+                 'min': min2,
+                 'sin': sin1,
+                 'cos': cos1,
+                 'tan': tan1}

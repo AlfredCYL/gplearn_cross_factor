@@ -5,12 +5,6 @@ computer program. It is used for creating and evolving programs used in the
 :mod:`gplearn.genetic` module.
 """
 import pandas as pd
-
-'''
-gplearnRPC._program 模块主要包含了对如何构建遗传算法表达式进行了设计。它的主要用途是创建和进化表达式。
-这个文件主要设计了表达式构建的具体的结构，具体的遗传，变异以及突变的方案可以参考gplearnRPC.genetic
-Author: Shawn_RPC
-'''
 from copy import copy
 import numpy as np
 from sklearn.utils.random import sample_without_replacement
@@ -21,111 +15,103 @@ from copy import  deepcopy
 warnings.filterwarnings("ignore")
 
 class _Program(object):
-    '''
-    一个能够不断进化的表达式的类库
-    '''
-    """
-    
-    初始化参数
+    """A program-like representation of the evolved program.
+
+    This is the underlying data-structure used by the public classes in the
+    :mod:`gplearn.genetic` module. It should not be used directly by the user.
+
+    Parameters
     ----------
     function_set : list
-        一个在表达式类库中合法的函数集合
+        A list of valid functions to use in the program.
 
     arities : dict
-        
-        一个以字典形式展示的算子库`{arity: [functions]}`这里的算子指的是表达式需要的算子的个数。
-        举例：ADD(X1,X2)就是一个二元的算子，它需要把两个特征输入进行相加。因此在这个arties字典中
-        它需要存储为{2:[Add(_Function),...,]}的形式。而这个对象是需要和function_set一一对应的。
-        
-        
+        A dictionary of the form `{arity: [functions]}`. The arity is the
+        number of arguments that the function takes, the functions must match
+        those in the `function_set` parameter.
+
     init_depth : tuple of two ints
-        初始深度，这个深度会在构建表达式的时候到。具体的逻辑关系是这样的：
-        在构建一个原始的随机表达式(具体指的是由build_program 函数直接生成而没有经过遗传的表达式)
-        的时候，由该参数去确定某个表达式的最大深度[具体做法就是在tuple的整数之间rangInt]。
+        The range of tree depths for the initial population of naive formulas.
+        Individual trees will randomly choose a maximum depth from this range.
+        When combined with `init_method='half and half'` this yields the well-
+        known 'ramped half and half' initialization method.
 
     init_method : str
         - 'grow' : Nodes are chosen at random from both functions and
           terminals, allowing for smaller trees than `init_depth` allows. Tends
           to grow asymmetrical trees.
-          “在交叉变异的时候，会同时从函数池和中间结果中随机抽取，
-          允许出现比初始深度更小的树（也就是表达式）。这种方法更加倾向于不平衡的树。”
         - 'full' : Functions are chosen until the `init_depth` is reached, and
           then terminals are selected. Tends to grow 'bushy' trees.
-          在该方法中，函数们会被不停地选择直到达到最大深度，会倾向于创造“繁茂”的树[丰满的表达式].
-        - 'half and half' : 用了一个randInt以各50%的概率选择这两种方法在每一代中构造表达式.
+        - 'half and half' : Trees are grown through a 50/50 mix of 'full' and
+          'grow', making for a mix of tree shapes in the initial population.
 
     n_features : int
-        训练集X 输入的特征数量
+        The number of features in `X`.
 
     const_range : tuple of two floats
-        常数范围例如（-1，1） 在表达式中是有可能补常数的，如果是float，就会被认为是常参数并写入表达式.
         The range of constants to include in the formulas.
 
     metric : _Fitness object
-        衡量方法，确定某个表达式是否符合我们需求的函数，感觉和强化学习中的reward以及深度学习中的loss有点类似
-        
+        The raw fitness metric.
 
     p_point_replace : float
         The probability that any given node will be mutated during point
         mutation.
-        在点变异[叶子节点]的过程中任何节点被替换的概率
 
     parsimony_coefficient : float
-        配置系数。这个常数惩罚了较冗长的表达式通过修正他们的fitness让其更加不容易在以后的遗传中被
-        选中。这个参数值越高就越抑制随着遗传代际增加过程中较难避免的表达式的冗余生长——“膨胀”。所谓
-        “膨胀”，就是指在遗传进化的过程中表达式的长度变长了，公式变复杂了，但fitness却没有一个显著
-        地增长，而仅仅带来了时空间的浪费。在持续的遗传中，这个参数最好被适当调整。
-        
+        This constant penalizes large programs by adjusting their fitness to
+        be less favorable for selection. Larger values penalize the program
+        more which can control the phenomenon known as 'bloat'. Bloat is when
+        evolution is increasing the size of programs without a significant
+        increase in fitness, which is costly for computation time and makes for
+        a less understandable final result. This parameter may need to be tuned
+        over successive runs.
 
     random_state : RandomState instance
-        随机数的生成对象。并行计算相同表达式对象的时候可以通过这个参数传递不同的随机状态来保证
-        并行的时候，每个表达式的随机性。
+        The random number generator. Note that ints, or None are not allowed.
+        The reason for this being passed is that during parallel evolution the
+        same program object may be accessed by multiple parallel processes.
 
     transformer : _Function object, optional (default=None)
-        只有在SymbolicClassifer中会被用到，去把表达式的输出转换成概率分布。
+        The function to transform the output of the program to probabilities,
+        only used for the SymbolicClassifier.
 
     feature_names : list, optional (default=None)
-        可选的输入，顾名思义式特征的名称。在比如打印整个图或者表达式结构的时候会用到，如果不设置，
-        那么只能用X0，X1等值来描述表达式。
+        Optional list of feature names, used purely for representations in
+        the `print` operation or `export_graphviz`. If None, then X0, X1, etc
+        will be used for representations.
 
     program : list, optional (default=None)
         The flattened tree representation of the program. If None, a new naive
         random tree will be grown. If provided, it will be validated.
-        一个需要被验证的表达式，如果是None，那么会重新生成一个表达式，但如果有，那么就会被验证是否合法，
-        如果合法那就可以被继续使用和训练。
 
     Attributes
     ----------
     program : list
         The flattened tree representation of the program.
-        对于表达式的一种展平的树结构表示
 
     raw_fitness_ : float
         The raw fitness of the individual program.
-        独立的表达式的原始适配度(fitness).
 
     fitness_ : float
         The penalized fitness of the individual program.
-        受到惩罚后的适配度
 
     oob_fitness_ : float
-        样本外适配度：在计算的时候，会对整体样本进行一个随机的采样，只有样本内数据用来计算适配度
-        可以用作下一代的样本的挑选。而样本外适应度可以说明一些问题或许可以被利用起来。只有当
-        传入参数的：max_samples<1.0才会起作用。这是因为比如max_samples=0.9的时候，90%
-        的数据会被采样出来作为样本内，而剩下的10%就是样本外。
-        
+        The out-of-bag raw fitness of the individual program for the held-out
+        samples. Only present when sub-sampling was used in the estimator by
+        specifying `max_samples` < 1.0.
 
     parents : dict, or None
-        如果为空，则这是一个从初始规模开始的原始随机的表达式生成；否则就是一个有父类的再训练过程，
-        
+        If None, this is a naive random program from the initial population.
+        Otherwise it includes meta-data about the program's parent(s) as well
+        as the genetic operations performed to yield the current program. This
+        is set outside this class by the controlling evolution loops.
 
     depth_ : int
-        当前表达式的深度
+        The maximum depth of the program tree.
 
     length_ : int
-        该表达式中函数池和完整表达式的数量。
-        这里的完整表达式是指这个表达式所包含的子表达式。
-        例如:Add(X0,Sub(X1,X2))中，Sub(X1,X2)就是一个完整的表达式——标准就是函数和特征完整。
+        The number of functions and terminals in the program.
 
     """
 
@@ -172,8 +158,6 @@ class _Program(object):
         self._indices_state = None
 
 
-
-
     def build_program(self, random_state):
         """
         构建原生的随机表达式
@@ -200,9 +184,7 @@ class _Program(object):
         # 随机选择第一个初始的函数算子
         function = random_state.randint(len(self.function_set))
         function = deepcopy(self.function_set[function])
-        if function.isRandom:
-            current_window = random_state.randint(function.RandRange[0], function.RandRange[1])
-            function.baseConst = current_window
+
         program = [function]
         # 增加该算子需要的参数值
         terminal_stack = [function.arity]
@@ -221,12 +203,7 @@ class _Program(object):
                                         choice <= len(self.function_set)):
                 function = random_state.randint(len(self.function_set))
                 function = deepcopy(self.function_set[function])
-                if function.isRandom:
-                    current_window = random_state.randint(function.RandRange[0],function.RandRange[1])
-                    function.baseConst = current_window
-                    program.append(function)
-                else:
-                    program.append(function)
+                program.append(function)
                 terminal_stack.append(function.arity)
             else:
                 # We need a terminal, add a variable or constant
@@ -282,19 +259,14 @@ class _Program(object):
                     terminals[-1] -= 1
         return terminals == [-1]
 
-
-
-
     def __str__(self):
         """Overloads `print` output of the object to resemble a LISP tree."""
         terminals = [0]
         output = ''
-        isRandomFunction = 0
         RandomFunctionStack = []
         # RandomFunctionStack[0].arity = 0
         for i, node in enumerate(self.program):
             if isinstance(node, _Function):
-                # if node.isRandom:
                 RandomFunctionStack.append(deepcopy(node))
                 terminals.append(node.arity)
                 output += node.name + '('
@@ -310,8 +282,7 @@ class _Program(object):
 
                 if len(RandomFunctionStack)>0:
                     RandomFunctionStack[-1].arity -= 1
-                    if RandomFunctionStack[-1].isRandom and RandomFunctionStack[-1].arity==0:
-                        output += ',' +str( RandomFunctionStack[-1].baseConst)
+                    
                 while terminals[-1] == 0:
                     RandomFunctionStack.pop()
                     terminals.pop()
@@ -319,10 +290,7 @@ class _Program(object):
                     terminals[-1] -= 1
                     if len(RandomFunctionStack)>0:
                         RandomFunctionStack[-1].arity -= 1
-
                         output += ')'
-                        if len(RandomFunctionStack)>0 and RandomFunctionStack[-1].isRandom:
-                            output += ',' + str( RandomFunctionStack[-1].baseConst)
                     else:
                         output += ')'
                 if i != len(self.program) - 1:
@@ -409,16 +377,6 @@ class _Program(object):
         """Calculates the number of functions and terminals in the program."""
         return len(self.program)
 
-    def _get_name_map(self, X):
-        name_map = {}
-        all_cols = X.columns
-        # all_cols = all_cols[1:]
-        all_cols = [col for col in all_cols if col != "交易日期"]
-        col_dictionary = {}
-        for pos, col in enumerate(all_cols):
-            col_dictionary[pos] = col
-        return col_dictionary
-
     def execute(self, X):
         """Execute the program according to X.
 
@@ -436,9 +394,6 @@ class _Program(object):
         """
         # Check for single-node programs
         node = self.program[0]
-        # col_dict = {}
-        # col_dict = self._get_name_map(X)
-
         if isinstance(node, float):
             return np.repeat(node, X.shape[0])
         if isinstance(node, int):
@@ -457,10 +412,9 @@ class _Program(object):
             while len(apply_stack[-1]) == apply_stack[-1][0].arity + 1:
                 # Apply functions that have sufficient arguments
                 function = apply_stack[-1][0]
-                terminals = [pd.Series(np.repeat(t, X.shape[0])) if isinstance(t, float)
-                             else X[:, t, :] if isinstance(t, int)
-                else t for t in apply_stack[-1][1:]]
-                terminals = pd.concat(terminals, axis=1)
+                terminals = [np.repeat(t, X.shape[0]) if isinstance(t, float)
+                             else X[:, t] if isinstance(t, int)
+                             else t for t in apply_stack[-1][1:]]
                 intermediate_result = function(*terminals)
                 if len(apply_stack) != 1:
                     apply_stack.pop()
@@ -470,25 +424,11 @@ class _Program(object):
 
         # We should never get here
         return None
+    
     def execute_3D(self, X):
-        """Execute the program according to X.
-
-        Parameters
-        ----------
-        X : {array-like}, shape = [n_samples, n_features]
-            Training vectors, where n_samples is the number of samples and
-            n_features is the number of features.
-
-        Returns
-        -------
-        y_hats : array-like, shape = [n_samples]
-            The result of executing the program on X.
-
-        """
+        
         # Check for single-node programs
         node = self.program[0]
-        # col_dict = {}
-        # col_dict = self._get_name_map(X)
 
         if isinstance(node, float):
             return np.tile(node, (X.shape[0], X.shape[2]))
@@ -501,8 +441,6 @@ class _Program(object):
 
             if isinstance(node, _Function):
                 apply_stack.append([node])
-            # elif isinstance(node,tuple):
-            #     apply_stack.append([node])
             else:
                 # Lazily evaluate later
                 apply_stack[-1].append(node)
@@ -522,6 +460,7 @@ class _Program(object):
 
         # We should never get here
         return None
+
 
     def get_all_indices(self, n_samples=None, max_samples=None,
                         random_state=None):
@@ -570,109 +509,37 @@ class _Program(object):
 
         return indices, not_indices
 
-    def get_all_indices_df(self, X=pd.DataFrame(), n_samples=None, max_samples=None,
-                           random_state=None):
-        if self._indices_state is None and random_state is None:
-            raise ValueError('The program has not been evaluated for fitness '
-                             'yet, indices not available.')
-
-        if n_samples is not None and self._n_samples is None:
-            # 总数
-            self._n_samples = n_samples
-        if max_samples is not None and self._max_samples is None:
-            # 最大采样数
-            self._max_samples = max_samples
-        if random_state is not None and self._indices_state is None:
-            self._indices_state = random_state.get_state()
-
-        indices_state = check_random_state(None)
-        indices_state.set_state(self._indices_state)
-
-        # group the DataFrame by 'date' and sample 90% of the rows for each group
-        sampled_df = X.groupby('交易日期').apply(lambda x: x.sample(frac=0.9))
-
-        # get the indices of the sampled rows
-        sampled_indices = sampled_df.index.get_level_values(1)
-        # create a boolean mask of the rows that were sampled
-        sampled_mask = X.index.isin(sampled_indices)
-
-        not_sampled_indices = X[~sampled_mask].index
-        # not_indices = sample_without_replacement(
-        #     self._n_samples,
-        #     self._n_samples - self._max_samples,
-        #     random_state=indices_state)
-        # sample_counts = np.bincount(not_indices, minlength=self._n_samples)
-        # indices = np.where(sample_counts == 0)[0]
-
-        return sampled_indices, not_sampled_indices
-
-    def get_all_indices_df_3D(self, X=pd.DataFrame(), n_samples=None, max_samples=None,
-                           random_state=None):
-        if self._indices_state is None and random_state is None:
-            raise ValueError('The program has not been evaluated for fitness '
-                             'yet, indices not available.')
-
-        if n_samples is not None and self._n_samples is None:
-            # 总数
-            self._n_samples = n_samples
-        if max_samples is not None and self._max_samples is None:
-            # 最大采样数
-            self._max_samples = max_samples
-        if random_state is not None and self._indices_state is None:
-            self._indices_state = random_state.get_state()
-
-        indices_state = check_random_state(None)
-        indices_state.set_state(self._indices_state)
-
-        # group the DataFrame by 'date' and sample 90% of the rows for each group
-        sampled_df = X.groupby('交易日期').apply(lambda x: x.sample(frac=0.9))
-
-        # get the indices of the sampled rows
-        sampled_indices = sampled_df.index.get_level_values(1)
-        # create a boolean mask of the rows that were sampled
-        sampled_mask = X.index.isin(sampled_indices)
-
-        not_sampled_indices = X[~sampled_mask].index
-        # not_indices = sample_without_replacement(
-        #     self._n_samples,
-        #     self._n_samples - self._max_samples,
-        #     random_state=indices_state)
-        # sample_counts = np.bincount(not_indices, minlength=self._n_samples)
-        # indices = np.where(sample_counts == 0)[0]
-
-        return sampled_indices, not_sampled_indices
-
     def _indices(self):
         """Get the indices used to measure the program's fitness."""
         return self.get_all_indices()[0]
 
-    # def raw_fitness(self, X, y, sample_weight):
-    #     """Evaluate the raw fitness of the program according to X, y.
-    #
-    #     Parameters
-    #     ----------
-    #     X : {array-like}, shape = [n_samples, n_features]
-    #         Training vectors, where n_samples is the number of samples and
-    #         n_features is the number of features.
-    #
-    #     y : array-like, shape = [n_samples]
-    #         Target values.
-    #
-    #     sample_weight : array-like, shape = [n_samples]
-    #         Weights applied to individual samples.
-    #
-    #     Returns
-    #     -------
-    #     raw_fitness : float
-    #         The raw fitness of the program.
-    #
-    #     """
-    #     y_pred = self.execute(X)
-    #     if self.transformer:
-    #         y_pred = self.transformer(y_pred)
-    #     raw_fitness = self.metric(y, y_pred, sample_weight)
+    def raw_fitness(self, X, y, sample_weight):
+        """Evaluate the raw fitness of the program according to X, y.
 
-        # return raw_fitness
+        Parameters
+        ----------
+        X : {array-like}, shape = [n_samples, n_features]
+            Training vectors, where n_samples is the number of samples and
+            n_features is the number of features.
+
+        y : array-like, shape = [n_samples]
+            Target values.
+
+        sample_weight : array-like, shape = [n_samples]
+            Weights applied to individual samples.
+
+        Returns
+        -------
+        raw_fitness : float
+            The raw fitness of the program.
+
+        """
+        y_pred = self.execute(X)
+        if self.transformer:
+            y_pred = self.transformer(y_pred)
+        raw_fitness = self.metric(y, y_pred, sample_weight)
+
+        return raw_fitness
 
     def raw_fitness_3D(self, X, y, sample_weight):
         """Evaluate the raw fitness of the program according to X, y.

@@ -11,7 +11,6 @@ import pandas as pd
 from joblib import wrap_non_picklable_objects
 from scipy.stats import rankdata
 
-
 __all__ = ['make_fitness']
 
 
@@ -165,19 +164,83 @@ _fitness_map = {'pearson': weighted_pearson,
 }
 
 
-def _compute_rank_IC(y, y_pred, w):
+def compute_IC(y, y_pred, w, rank_ic=True):
     y = y[w.astype(bool)]
     y_pred = y_pred[w.astype(bool)]
-    ic = pd.DataFrame(y_pred).corrwith(pd.DataFrame(y),axis = 1, method = "spearman").mean()
+    if rank_ic:
+        ic = pd.DataFrame(y_pred).corrwith(pd.DataFrame(y),axis = 1, method = "spearman")
+    else:
+        ic = pd.DataFrame(y_pred).corrwith(pd.DataFrame(y),axis = 1, method = "pearson")
+    return ic 
+
+def _rank_IC(y, y_pred, w):
+    ic = compute_IC(y, y_pred, w).mean()
     if np.isnan(ic):
         return 0
     else:
         return abs(ic)
+
+def _rank_ICIR(y, y_pred, w):
+    ics = compute_IC(y, y_pred, w)
+    ic = ics.mean()
+    ic_std = ics.std()
+    icir = ic / ic_std
+    if np.isnan(icir):
+        return 0
+    else:
+        return abs(icir)
     
-weighted_rank_ic = _Fitness(function=_compute_rank_IC,greater_is_better=True)
+def compute_quantile10_rets(y, y_pred, w):
+    y_pred = y_pred[w.astype(bool)]
+    y = y[w.astype(bool)]
+    if np.all(np.isnan(y_pred)):
+        return None
+    
+    quantiles = 10
+    annulization = 252 #默认按日频年化收益
+    groups = np.array(range(quantiles)) + 1
+
+    factor_quantiles = pd.DataFrame(y_pred).rank(axis=1,method='first').dropna(axis=0, how='all').apply(pd.qcut, q=quantiles, labels = groups,axis=1)
+
+    rets = pd.DataFrame(y)
+    return_series = {}
+    for group in groups:
+        returns_group = rets[factor_quantiles == group]
+        return_series[group] = (returns_group.sum(axis=1) / returns_group.count(axis=1)).mean() * annulization # scale holding to 1 ; equal weights
+    return return_series
+
+def _quantile10_max(y, y_pred, w):
+    res = compute_quantile10_rets(y, y_pred, w)
+    if res is None:
+        return 0
+    else:
+        return max(res.values())
+    
+def measure_monotonicity(data):
+    ranks = [sorted(data).index(x) + 1 for x in data]
+    rank_differences = [ranks[i] - ranks[i-1] for i in range(1, len(ranks))]
+    positive_differences = sum(1 for diff in rank_differences if diff > 0)
+    negative_differences = sum(1 for diff in rank_differences if diff < 0)
+    monotonicity_score = abs(positive_differences - negative_differences) / len(data)
+    return monotonicity_score
+
+def _quantile10_monotonicity(y, y_pred, w):
+    res = compute_quantile10_rets(y, y_pred, w)
+    if res is None:
+        return 0
+    else:
+        return measure_monotonicity(res.values())
+    
+weighted_rank_ic = _Fitness(function=_rank_IC,greater_is_better=True)
+weighted_rank_icir = _Fitness(function=_rank_ICIR,greater_is_better=True)
+weighted_quantile_max = _Fitness(function=_quantile10_max,greater_is_better=True)
+weighted_quantile_mono = _Fitness(function=_quantile10_monotonicity,greater_is_better=True)
 
 _extra_map = {
     "rank_ic":weighted_rank_ic,
+    "rank_icir":weighted_rank_icir,
+    "quantile_max":weighted_quantile_max,
+    "quantile_mono":weighted_quantile_mono,
 }
 
 _fitness_map = dict(_fitness_map, **_extra_map)
