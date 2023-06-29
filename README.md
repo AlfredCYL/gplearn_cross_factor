@@ -10,7 +10,7 @@ In the initial version, the gplearn package only supported rankIC as the fitness
 We have incorporated a range of additional fitness metrics to complement rankIC. These new metrics include irir, quantile returns and monotonicity. By incorporating these metrics, you can conduct a more comprehensive evaluation of factors, leading to improved GP performance.
 
 ### Enhanced Base Operators
-The modified package now offers an expanded set of base operators, including both time series and cross-sectional capabilities. This enhancement provides increased flexibility, empowering researchers and practitioners to conduct more effective cross-sectional factor analysis.
+The modified package now offers an expanded set of base operators, including both time series and cross-sectional capabilities. This enhancement provides increased flexibility, empowering researchers and practitioners to conduct more effective cross-sectional factor analysis. More operators (ts_residual, ts_cov, normalization, standardization, etc.) are coming.
 
 ## Getting Started
 
