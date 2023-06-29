@@ -1,6 +1,6 @@
-# gp_cross_factor
+# gplearn_cross_factor
 
-Welcome to the gp_cross_factor project! The primary objective of this project is to enhance the existing gplearn package and enable three-dimensional structured dimension genetic programming (GP) specifically for cross-sectional factor investigation.
+Welcome to the gplearn_cross_factor project! The primary objective of this project is to enhance the existing gplearn package and enable three-dimensional structured dimension genetic programming (GP) specifically for cross-sectional factor investigation.
 
 ## Project Overview
 
@@ -14,7 +14,7 @@ The modified package now offers an expanded set of base operators, including bot
 
 ## Getting Started
 
-To get started with gp_cross_factor, follow these steps:
+To get started with gplearn_cross_factor, follow these steps:
 
 1. Install the package by running `pip install gplearn` in your terminal.
 2. Import the necessary modules and functions required for factor analysis.
@@ -31,6 +31,6 @@ We welcome contributions from the community to further enhance and expand the fu
 
 ## Stay Updated
 
-Stay tuned for future releases as I continue to improve and enrich gp_cross_factor. Don't miss out on the latest updates and enhancements by watching this repository.
+Stay tuned for future releases as I continue to improve and enrich gplearn_cross_factor. Don't miss out on the latest updates and enhancements by watching this repository.
 
-Happy factor analysis with gp_cross_factor!
+Happy factor analysis with gplearn_cross_factor!
