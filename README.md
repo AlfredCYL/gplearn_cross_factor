@@ -16,14 +16,13 @@ The modified package now offers an expanded set of base operators, including bot
 
 To get started with gplearn_cross_factor, follow these steps:
 
-1. Install the package by running `pip install gplearn` in your terminal.
-2. Import the necessary modules and functions required for factor analysis.
-3. Specify your desired fitness metrics, including rankIC, quantile returns, monotonicity, and correlation within factors.
-4. Define and prepare your data inputs for analysis.
-5. Run the genetic programming algorithm using the provided functions and operators.
-6. Evaluate and interpret the results to gain insights into your cross-sectional factors.
+1. Import the necessary modules and functions required for factor analysis.
+2. Specify your desired fitness metrics, including rankIC, quantile returns, monotonicity, and correlation within factors.
+3. Define and prepare your data inputs for analysis.
+4. Run the genetic programming algorithm using the provided functions and operators.
+5. Evaluate and interpret the results to gain insights into your cross-sectional factors.
 
-For more detailed instructions and examples, please refer to the documentation provided in the repository.
+For more detailed instructions and examples, please refer to [the documentation](/Functional%20Demo.ipynb) provided in the repository.
 
 ## Contributing
 
