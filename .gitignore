@@ -1,3 +1,4 @@
 *.npy
 backup/
+data/
 __pycache__/

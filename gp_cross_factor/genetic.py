@@ -1898,22 +1898,22 @@ class SymbolicTransformer(BaseSymbolic, TransformerMixin):
             quantile_max = eval(quantile_max)
             quantile_mono = eval(quantile_mono)
 
-            #  OOB计算指标
+            #  OOB Calculation
             OOB_rank_ic = eval(OOB_rank_ic)
             OOB_rank_icir = eval(OOB_rank_icir)
             OOB_quantile_max = eval(OOB_quantile_max)
             OOB_quantile_mono = eval(OOB_quantile_mono)
 
 
-            result.append({"表达式": program.__str__(),
-                                    "训练集RankIC": rank_ic,
-                                    "样本外RankIC": OOB_rank_ic,
-                                    "训练集RankICIR": rank_icir,
-                                    "样本外RankICIR": OOB_rank_icir,
-                                    "训练集TopQuantileRet": quantile_max,
-                                    "样本外TopQuantileRet": OOB_quantile_max,
-                                    "训练集QuantileMono": quantile_mono,
-                                    "样本外QuantileMono": OOB_quantile_mono,
+            result.append({"Expression": program.__str__(),
+                                    "IS RankIC": rank_ic,
+                                    "OOS RankIC": OOB_rank_ic,
+                                    "IS RankICIR": rank_icir,
+                                    "OOS RankICIR": OOB_rank_icir,
+                                    "IS TopQuantileRet": quantile_max,
+                                    "OOS TopQuantileRet": OOB_quantile_max,
+                                    "IS QuantileMono": quantile_mono,
+                                    "OOS QuantileMono": OOB_quantile_mono,
                                     })
         return result
 
@@ -1923,15 +1923,15 @@ class SymbolicTransformer(BaseSymbolic, TransformerMixin):
         
         if baseline:
             for program in self._total_program:
-                result.append({"表达式": program.__str__(),
-                                        "fitness": program.raw_fitness_,
-                                        "OOB fitness": program.oob_fitness_,
+                result.append({"Expression": program.__str__(),
+                                        "Fitness": program.raw_fitness_,
+                                        "OOB Fitness": program.oob_fitness_,
                                         })
         else:            
             for program in self._best_programs:
-                result.append({"表达式": program.__str__(),
-                                        "fitness": program.raw_fitness_,
-                                        "OOB fitness": program.oob_fitness_,
+                result.append({"Expression": program.__str__(),
+                                        "Fitness": program.raw_fitness_,
+                                        "OOB Fitness": program.oob_fitness_,
                                         })
         return result
 

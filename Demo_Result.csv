@@ -1,4 +1,4 @@
-idx,表达式,fitness,OOB fitness
+idx,Expression,Fitness,OOB Fitness
 2,"div(ts_std_40(ts_correlation_40(close, close)), volume)",0.0338718425158699,0.040177626910183985
 3,"div(div(ts_std_40(ts_correlation_40(close, close)), volume), volume)",0.033675519248717194,0.0439740130024885
 1,ts_std_5(vwap),0.025998770038706487,0.030634251522470506
