@@ -163,19 +163,8 @@ _fitness_map = {'pearson': weighted_pearson,
                 'log loss': log_loss
 }
 
-def calculate_nan_rate_2d(array): # 计算空值率 
-    total_elements = np.size(array)  
-    nan_elements = np.count_nonzero(np.isnan(array))  
-    
-    nan_rate = nan_elements / total_elements 
-    return nan_rate
 
 def compute_IC(y, y_pred, w, rank_ic=True):
-    y_pred = y_pred.copy()
-    y_pred[np.isinf(y_pred)] = np.nan
-    if calculate_nan_rate_2d(y) > 0.3: # 保证空值率小于0.3
-        return 
-
     y = y[w.astype(bool)]
     y_pred = y_pred[w.astype(bool)]
     if rank_ic:
@@ -185,11 +174,7 @@ def compute_IC(y, y_pred, w, rank_ic=True):
     return ic 
 
 def _rank_IC(y, y_pred, w):
-    ics = compute_IC(y, y_pred, w)
-    if ics is None:
-        return 0
-        
-    ic = ics.mean()
+    ic = compute_IC(y, y_pred, w).mean()
     if np.isnan(ic):
         return 0
     else:
@@ -197,9 +182,6 @@ def _rank_IC(y, y_pred, w):
 
 def _rank_ICIR(y, y_pred, w):
     ics = compute_IC(y, y_pred, w)
-    if ics is None:
-        return 0
-        
     ic = ics.mean()
     ic_std = ics.std()
     icir = ic / ic_std
