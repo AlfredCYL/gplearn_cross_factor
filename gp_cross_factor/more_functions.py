@@ -13,51 +13,51 @@ def error_state_decorator(func):
 
 @error_state_decorator
 def scale(A, scaler=1):
-    ret = pd.DataFrame(A)
-    factor = scaler * ret.div(ret.sum(axis=1), axis=0).to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = scaler * df.div(df.sum(axis=1), axis=0).to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def rank(A):
-    ret = pd.DataFrame(A)
-    factor = ret.rank(axis=1).to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = df.rank(axis=1).to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def delay(A, window=1):
-    ret = pd.DataFrame(A)
-    factor = ret.shift(window).to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = df.shift(window).to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def delta(A, window=1):
-    ret = pd.DataFrame(A)
-    factor = ret.diff(window).to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = df.diff(window).to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def rolling_nanmean(A, window=5):
-    ret = pd.DataFrame(A)
-    factor = ret.rolling(window,min_periods=2).mean().to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = df.rolling(window,min_periods=2).mean().to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def rolling_nanstd(A, window=5):
-    ret = pd.DataFrame(A)
-    factor = ret.rolling(window,min_periods=2).std().to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = df.rolling(window,min_periods=2).std().to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def rolling_max(A, window=5):
-    ret = pd.DataFrame(A)
-    factor = ret.rolling(window,min_periods=2).max()
+    df = pd.DataFrame(A)
+    factor = df.rolling(window,min_periods=2).max()
     factor = factor.to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def rolling_min(A, window=5):
-    ret = pd.DataFrame(A)
-    factor = ret.rolling(window,min_periods=2).min()
+    df = pd.DataFrame(A)
+    factor = df.rolling(window,min_periods=2).min()
     factor = factor.to_numpy(dtype=np.double)
     return factor
 
@@ -70,20 +70,20 @@ def rolling_correlation(A, B, window=5):
 
 @error_state_decorator
 def rolling_argmin(A, window=5):
-    ret = pd.DataFrame(A)
-    factor = ret.rolling(window,min_periods=2).apply(lambda x: np.argmin(x), raw=True).to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = df.rolling(window,min_periods=2).apply(lambda x: np.argmin(x), raw=True).to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def rolling_argmax(A, window=5):
-    ret = pd.DataFrame(A)
-    factor = ret.rolling(window,min_periods=2).apply(lambda x: np.argmax(x), raw=True).to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = df.rolling(window,min_periods=2).apply(lambda x: np.argmax(x), raw=True).to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
 def rolling_rank(A, window=5):
-    ret = pd.DataFrame(A)
-    factor = ret.rolling(window,min_periods=2).rank().to_numpy(dtype=np.double)
+    df = pd.DataFrame(A)
+    factor = df.rolling(window,min_periods=2).rank().to_numpy(dtype=np.double)
     return factor
 
 @error_state_decorator
