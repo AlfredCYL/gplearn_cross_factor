@@ -1,4 +1,5 @@
-"""Metrics to evaluate the fitness of a program.
+"""
+Metrics to evaluate the fitness of a program.
 
 The :mod:`gplearn.fitness` module contains some metric with which to evaluate
 the computer programs created by the :mod:`gplearn.genetic` module.

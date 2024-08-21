@@ -1,9 +1,9 @@
-"""The underlying data structure used in gplearn.
-
-The :mod:`gplearn._program` module contains the underlying representation of a
-computer program. It is used for creating and evolving programs used in the
-:mod:`gplearn.genetic` module.
 """
+The underlying data structure used in gplearn.
+
+The `_Program` class is the underlying representation of a computer program. It is used for creating and evolving programs in the `gplearn.genetic` module.
+"""
+
 import pandas as pd
 from copy import copy
 import numpy as np
@@ -15,7 +15,8 @@ from copy import  deepcopy
 warnings.filterwarnings("ignore")
 
 class _Program(object):
-    """A program-like representation of the evolved program.
+    """
+    A program-like representation of the evolved program.
 
     This is the underlying data-structure used by the public classes in the
     :mod:`gplearn.genetic` module. It should not be used directly by the user.
@@ -107,6 +108,10 @@ class _Program(object):
         as the genetic operations performed to yield the current program. This
         is set outside this class by the controlling evolution loops.
 
+    _satisfied : bool
+        A flag to indicate if the program has beaten the threshold and been
+        selected. This is set outside this class by the controlling evolution
+
     depth_ : int
         The maximum depth of the program tree.
 
@@ -142,6 +147,7 @@ class _Program(object):
         self.transformer = transformer
         self.feature_names = feature_names
         self.program = program
+        self._satisfied = False # This is a flag to indicate if the program has beaten the threshold and been selected.
 
         if self.program is not None:
             if not self.validate_program():
@@ -160,81 +166,58 @@ class _Program(object):
 
     def build_program(self, random_state):
         """
-        构建原生的随机表达式
+        Build a raw random expression.
 
         Parameters
         ----------
         random_state : RandomState instance
-            随机状态生成
 
         Returns
         -------
         program : list
-            展平的树结构的表达式（具体的解读方式类似于编译器对栈元素的解读）.
-
+            Flattened tree structure of the expression (interpreted similarly to 
+            how a compiler interprets stack elements).
         """
         if self.init_method == 'half and half':
             method = ('full' if random_state.randint(2) else 'grow')
         else:
             method = self.init_method
-        # 确定了每次增加的最大深度
         max_depth = random_state.randint(*self.init_depth)
 
         # Start a program with a function to avoid degenerative programs
-        # 随机选择第一个初始的函数算子
         function = random_state.randint(len(self.function_set))
         function = deepcopy(self.function_set[function])
-
         program = [function]
-        # 增加该算子需要的参数值
         terminal_stack = [function.arity]
         terminal_value_stack = []
-        # 当terminal_stack 的参数值没有被填满，表达式不充实的时候
+
         while terminal_stack:
-            # 查看栈的深度
             depth = len(terminal_stack)
-            # 能选择的特征和其他算子总共有哪些
             choice = self.n_features + len(self.function_set)
-            # 随机选择算子
             choice = random_state.randint(choice)
             # Determine if we are adding a function or terminal
-            # 决定了我们是增加一个新的函数还是算子
-            if (depth < max_depth) and (method == 'full' or
-                                        choice <= len(self.function_set)):
+            if (depth < max_depth) and (method == 'full' or choice <= len(self.function_set)):
                 function = random_state.randint(len(self.function_set))
                 function = deepcopy(self.function_set[function])
                 program.append(function)
                 terminal_stack.append(function.arity)
             else:
-                # We need a terminal, add a variable or constant
-                if self.const_range is not None:
-                    # 生成特征还是常数
-                    terminal = random_state.randint(self.n_features + 1)
-                    # 如果说:
-                    # 1. 当前的值是因子，且和之前的值相同，则重新生成因子
-                    while True:
-                        if (terminal in terminal_value_stack and terminal != self.n_features):
-                            terminal = random_state.randint(self.n_features + 1)
-                        else:
-                            break
-
-                else:
-                    terminal = random_state.randint(self.n_features)
+                # Generate a terminal (feature or constant)
+                terminal = random_state.randint(self.n_features + (1 if self.const_range is not None else 0))
+                
+                # Ensure the selected feature (not constant) hasn't been used already => avoid same features used in a node function
+                while terminal in terminal_value_stack and terminal != self.n_features:
+                    terminal = random_state.randint(self.n_features + (1 if self.const_range is not None else 0))
 
                 if terminal == self.n_features:
-                    terminal = round(random_state.uniform(*self.const_range),3)
-                    while True:
-                        if terminal==0:
-                            terminal = random_state.uniform(*self.const_range)
-                        else:
-                            break
+                    terminal = random_state.uniform(*self.const_range)
                     if self.const_range is None:
                         # We should never get here
-                        raise ValueError('A constant was produced with '
-                                         'const_range=None.')
+                        raise ValueError('A constant was produced with const_range=None.')
+                
                 program.append(terminal)
                 terminal_stack[-1] -= 1
-                if terminal_stack[-1]>0:
+                if terminal_stack[-1] > 0:
                     terminal_value_stack.append(terminal)
                 while terminal_stack[-1] == 0:
                     terminal_value_stack = []
@@ -258,7 +241,7 @@ class _Program(object):
                     terminals.pop()
                     terminals[-1] -= 1
         return terminals == [-1]
-
+   
     def __str__(self):
         """Overloads `print` output of the object to resemble a LISP tree."""
         terminals = [0]
@@ -297,9 +280,10 @@ class _Program(object):
                     output += ', '
 
         return output
-
+    
     def export_graphviz(self, fade_nodes=None):
-        """Returns a string, Graphviz script for visualizing the program.
+        """
+        Returns a string containing the Graphviz script for visualizing the program.
 
         Parameters
         ----------
@@ -357,76 +341,22 @@ class _Program(object):
 
         # We should never get here
         return None
-
-    def _depth(self):
-        """Calculates the maximum depth of the program tree."""
-        terminals = [0]
-        depth = 1
-        for node in self.program:
-            if isinstance(node, _Function):
-                terminals.append(node.arity)
-                depth = max(len(terminals), depth)
-            else:
-                terminals[-1] -= 1
-                while terminals[-1] == 0:
-                    terminals.pop()
-                    terminals[-1] -= 1
-        return depth - 1
-
-    def _length(self):
-        """Calculates the number of functions and terminals in the program."""
-        return len(self.program)
-
-    def execute(self, X):
-        """Execute the program according to X.
-
-        Parameters
-        ----------
-        X : {array-like}, shape = [n_samples, n_features]
-            Training vectors, where n_samples is the number of samples and
-            n_features is the number of features.
-
-        Returns
-        -------
-        y_hats : array-like, shape = [n_samples]
-            The result of executing the program on X.
-
-        """
-        # Check for single-node programs
-        node = self.program[0]
-        if isinstance(node, float):
-            return np.repeat(node, X.shape[0])
-        if isinstance(node, int):
-            return X[:, node]
-
-        apply_stack = []
-
-        for node in self.program:
-
-            if isinstance(node, _Function):
-                apply_stack.append([node])
-            else:
-                # Lazily evaluate later
-                apply_stack[-1].append(node)
-
-            while len(apply_stack[-1]) == apply_stack[-1][0].arity + 1:
-                # Apply functions that have sufficient arguments
-                function = apply_stack[-1][0]
-                terminals = [np.repeat(t, X.shape[0]) if isinstance(t, float)
-                             else X[:, t] if isinstance(t, int)
-                             else t for t in apply_stack[-1][1:]]
-                intermediate_result = function(*terminals)
-                if len(apply_stack) != 1:
-                    apply_stack.pop()
-                    apply_stack[-1].append(intermediate_result)
-                else:
-                    return intermediate_result
-
-        # We should never get here
-        return None
     
     def execute_3D(self, X):
+        """
+        Executes the 3D program on the input data X.
+
+        Parameters:
+        ----------
+        - X: np.array
+            The input data of shape (n_samples, n_nodes, n_features).
         
+        Returns:
+        ----------
+        - result: The result of executing the program on the input data.
+
+        """
+
         # Check for single-node programs
         node = self.program[0]
 
@@ -438,7 +368,6 @@ class _Program(object):
         apply_stack = []
 
         for node in self.program:
-
             if isinstance(node, _Function):
                 apply_stack.append([node])
             else:
@@ -448,9 +377,7 @@ class _Program(object):
             while len(apply_stack[-1]) == apply_stack[-1][0].arity + 1:
                 # Apply functions that have sufficient arguments
                 function = apply_stack[-1][0]
-                terminals = [np.tile(t, (X.shape[0],X.shape[2])) if isinstance(t, float)
-            else X[:,t,:] if isinstance(t, int)
-                else t for t in apply_stack[-1][1:]]
+                terminals = [np.tile(t, (X.shape[0],X.shape[2])) if isinstance(t, float) else X[:,t,:] if isinstance(t, int) else t for t in apply_stack[-1][1:]]
                 intermediate_result = function(*terminals)
                 if len(apply_stack) != 1:
                     apply_stack.pop()
@@ -461,97 +388,15 @@ class _Program(object):
         # We should never get here
         return None
 
-
-    def get_all_indices(self, n_samples=None, max_samples=None,
-                        random_state=None):
-        """Get the indices on which to evaluate the fitness of a program.
-
-        Parameters
-        ----------
-        n_samples : int
-            The number of samples.
-
-        max_samples : int
-            The maximum number of samples to use.
-
-        random_state : RandomState instance
-            The random number generator.
-
-        Returns
-        -------
-        indices : array-like, shape = [n_samples]
-            The in-sample indices.
-
-        not_indices : array-like, shape = [n_samples]
-            The out-of-sample indices.
-
-        """
-        if self._indices_state is None and random_state is None:
-            raise ValueError('The program has not been evaluated for fitness '
-                             'yet, indices not available.')
-
-        if n_samples is not None and self._n_samples is None:
-            self._n_samples = n_samples
-        if max_samples is not None and self._max_samples is None:
-            self._max_samples = max_samples
-        if random_state is not None and self._indices_state is None:
-            self._indices_state = random_state.get_state()
-
-        indices_state = check_random_state(None)
-        indices_state.set_state(self._indices_state)
-
-        not_indices = sample_without_replacement(
-            self._n_samples,
-            self._n_samples - self._max_samples,
-            random_state=indices_state)
-        sample_counts = np.bincount(not_indices, minlength=self._n_samples)
-        indices = np.where(sample_counts == 0)[0]
-
-        return indices, not_indices
-
-    def _indices(self):
-        """Get the indices used to measure the program's fitness."""
-        return self.get_all_indices()[0]
-
-    def raw_fitness(self, X, y, sample_weight):
-        """Evaluate the raw fitness of the program according to X, y.
-
-        Parameters
-        ----------
-        X : {array-like}, shape = [n_samples, n_features]
-            Training vectors, where n_samples is the number of samples and
-            n_features is the number of features.
-
-        y : array-like, shape = [n_samples]
-            Target values.
-
-        sample_weight : array-like, shape = [n_samples]
-            Weights applied to individual samples.
-
-        Returns
-        -------
-        raw_fitness : float
-            The raw fitness of the program.
-
-        """
-        y_pred = self.execute(X)
-        if self.transformer:
-            y_pred = self.transformer(y_pred)
-        raw_fitness = self.metric(y, y_pred, sample_weight)
-
-        return raw_fitness
-
     def raw_fitness_3D(self, X, y, sample_weight):
-        """Evaluate the raw fitness of the program according to X, y.
+        """
+        Evaluate the raw fitness of the program according to X, y.
 
         Parameters
         ----------
-        X : {array-like}, shape = [n_samples, n_features]
-            Training vectors, where n_samples is the number of samples and
-            n_features is the number of features.
+        X : array-like, shape = [n_dates, n_features, n_stocks]
 
-        y : array-like, shape = [n_samples]
-            Target values.
+        y : array-like, shape = [n_dates, n_features, n_stocks]
 
         sample_weight : array-like, shape = [n_samples]
             Weights applied to individual samples.
@@ -571,7 +416,8 @@ class _Program(object):
 
 
     def fitness(self, parsimony_coefficient=None):
-        """Evaluate the penalized fitness of the program according to X, y.
+        """
+        Evaluate the penalized fitness of the program according to X, y.
 
         Parameters
         ----------
@@ -587,11 +433,12 @@ class _Program(object):
         """
         if parsimony_coefficient is None:
             parsimony_coefficient = self.parsimony_coefficient
-        penalty = parsimony_coefficient * len(self.program) * self.metric.sign
+        penalty = parsimony_coefficient * self.length_ * self.metric.sign
         return self.raw_fitness_ - penalty
 
     def get_subtree(self, random_state, program=None):
-        """Get a random subtree from the program.
+        """
+        Get a random subtree from the program.
 
         Parameters
         ----------
@@ -632,7 +479,8 @@ class _Program(object):
         return copy(self.program)
 
     def crossover(self, donor, random_state):
-        """Perform the crossover genetic operation on the program.
+        """
+        Perform the crossover genetic operation on the program.
 
         Crossover selects a random subtree from the embedded program to be
         replaced. A donor also has a subtree selected at random and this is
@@ -660,12 +508,11 @@ class _Program(object):
         donor_removed = list(set(range(len(donor))) -
                              set(range(donor_start, donor_end)))
         # Insert genetic material from donor
-        return (self.program[:start] +
-                donor[donor_start:donor_end] +
-                self.program[end:]), removed, donor_removed
+        return (self.program[:start] + donor[donor_start:donor_end] + self.program[end:]), removed, donor_removed
 
     def subtree_mutation(self, random_state):
-        """Perform the subtree mutation operation on the program.
+        """
+        Perform the subtree mutation operation on the program.
 
         Subtree mutation selects a random subtree from the embedded program to
         be replaced. A donor subtree is generated at random and this is
@@ -691,7 +538,8 @@ class _Program(object):
         return self.crossover(chicken, random_state)
 
     def hoist_mutation(self, random_state):
-        """Perform the hoist mutation operation on the program.
+        """
+        Perform the hoist mutation operation on the program.
 
         Hoist mutation selects a random subtree from the embedded program to
         be replaced. A random subtree of that subtree is then selected and this
@@ -721,7 +569,8 @@ class _Program(object):
         return self.program[:start] + hoist + self.program[end:], removed
 
     def point_mutation(self, random_state):
-        """Perform the point mutation operation on the program.
+        """
+        Perform the point mutation operation on the program.
 
         Point mutation selects random nodes from the embedded program to be
         replaced. Terminals are replaced by other terminals and functions are
@@ -742,8 +591,7 @@ class _Program(object):
         program = copy(self.program)
 
         # Get the nodes to modify
-        mutate = np.where(random_state.uniform(size=len(program)) <
-                          self.p_point_replace)[0]
+        mutate = np.where(random_state.uniform(size=len(program)) < self.p_point_replace)[0]
 
         for node in mutate:
             if isinstance(program[node], _Function):
@@ -763,12 +611,29 @@ class _Program(object):
                     terminal = random_state.uniform(*self.const_range)
                     if self.const_range is None:
                         # We should never get here
-                        raise ValueError('A constant was produced with '
-                                         'const_range=None.')
+                        raise ValueError('A constant was produced with const_range=None.')
                 program[node] = terminal
 
         return program, list(mutate)
 
+    def _depth(self):
+        """Calculates the maximum depth of the program tree."""
+        terminals = [0]
+        depth = 1
+        for node in self.program:
+            if isinstance(node, _Function):
+                terminals.append(node.arity)
+                depth = max(len(terminals), depth)
+            else:
+                terminals[-1] -= 1
+                while terminals[-1] == 0:
+                    terminals.pop()
+                    terminals[-1] -= 1
+        return depth - 1
+
+    def _length(self):
+        """Calculates the number of functions and terminals in the program."""
+        return len(self.program)
+    
     depth_ = property(_depth)
     length_ = property(_length)
-    indices_ = property(_indices)

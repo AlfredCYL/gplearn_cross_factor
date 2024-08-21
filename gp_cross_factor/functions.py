@@ -1,4 +1,5 @@
-"""The functions used to create programs.
+"""
+The functions used to create programs.
 
 The :mod:`gplearn.functions` module contains all of the functions used by
 gplearn programs. It also contains helper methods for a user to define their
@@ -10,10 +11,9 @@ from joblib import wrap_non_picklable_objects
 
 __all__ = ['make_function']
 
-
 class _Function(object):
-
-    """A representation of a mathematical relationship, a node in a program.
+    """
+    A representation of a mathematical relationship, a node in a program.
 
     This object is able to be called with NumPy vectorized arguments and return
     a resulting vector based on a mathematical relationship.
@@ -43,7 +43,8 @@ class _Function(object):
 
 
 def make_function(*, function, name, arity, wrap=True):
-    """Make a function node, a representation of a mathematical relationship.
+    """
+    Make a function node, a representation of a mathematical relationship.
 
     This factory function creates a function node, one of the core nodes in any
     program. The resulting object is able to be called with NumPy vectorized
@@ -76,9 +77,7 @@ def make_function(*, function, name, arity, wrap=True):
         raise ValueError('arity must be an int, got %s' % type(arity))
     if not isinstance(function, np.ufunc):
         if function.__code__.co_argcount != arity:
-            raise ValueError('arity %d does not match required number of '
-                             'function arguments of %d.'
-                             % (arity, function.__code__.co_argcount))
+            raise ValueError('arity %d does not match required number of function arguments of %d.' % (arity, function.__code__.co_argcount))
     if not isinstance(name, str):
         raise ValueError('name must be a string, got %s' % type(name))
     if not isinstance(wrap, bool):
@@ -89,32 +88,23 @@ def make_function(*, function, name, arity, wrap=True):
     try:
         function(*args)
     except (ValueError, TypeError):
-        raise ValueError('supplied function %s does not support arity of %d.'
-                         % (name, arity))
+        raise ValueError('supplied function %s does not support arity of %d.' % (name, arity))
     if not hasattr(function(*args), 'shape'):
-        raise ValueError('supplied function %s does not return a numpy array.'
-                         % name)
+        raise ValueError('supplied function %s does not return a numpy array.' % name)
     if function(*args).shape != (10,):
-        raise ValueError('supplied function %s does not return same shape as '
-                         'input vectors.' % name)
+        raise ValueError('supplied function %s does not return same shape as input vectors.' % name)
 
     # Check closure for zero & negative input arguments
     args = [np.zeros(10) for _ in range(arity)]
     if not np.all(np.isfinite(function(*args))):
-        raise ValueError('supplied function %s does not have closure against '
-                         'zeros in argument vectors.' % name)
+        raise ValueError('supplied function %s does not have closure against zeros in argument vectors.' % name)
     args = [-1 * np.ones(10) for _ in range(arity)]
     if not np.all(np.isfinite(function(*args))):
-        raise ValueError('supplied function %s does not have closure against '
-                         'negatives in argument vectors.' % name)
+        raise ValueError('supplied function %s does not have closure against negatives in argument vectors.' % name)
 
     if wrap:
-        return _Function(function=wrap_non_picklable_objects(function),
-                         name=name,
-                         arity=arity)
-    return _Function(function=function,
-                     name=name,
-                     arity=arity)
+        return _Function(function=wrap_non_picklable_objects(function), name=name, arity=arity)
+    return _Function(function=function, name=name, arity=arity)
 
 
 def _protected_division(x1, x2):
