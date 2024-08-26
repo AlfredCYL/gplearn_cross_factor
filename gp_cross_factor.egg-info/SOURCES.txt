@@ -1,0 +1,16 @@
+LICENSE
+MANIFEST.in
+README.md
+setup.py
+gp_cross_factor/__init__.py
+gp_cross_factor/_program.py
+gp_cross_factor/fitness.py
+gp_cross_factor/functions.py
+gp_cross_factor/genetic.py
+gp_cross_factor/more_functions.py
+gp_cross_factor/utils.py
+gp_cross_factor.egg-info/PKG-INFO
+gp_cross_factor.egg-info/SOURCES.txt
+gp_cross_factor.egg-info/dependency_links.txt
+gp_cross_factor.egg-info/requires.txt
+gp_cross_factor.egg-info/top_level.txt

@@ -1,3 +1,22 @@
+Metadata-Version: 2.1
+Name: gp_cross_factor
+Version: 1.0.3
+Summary: A tool for genetic programming based cross-factor analysis
+Home-page: https://github.com/AlfredCYL/gplearn_cross_factor
+Author: AlfredCYL
+Author-email: alfred.yl@outlook.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scipy
+Requires-Dist: scikit-learn
+Requires-Dist: joblib
+
 # gplearn_cross_factor
 
 Welcome to the gplearn_cross_factor project! The primary objective of this project is to enhance the existing gplearn package and enable three-dimensional structured dimension genetic programming (GP) specifically for cross-sectional factor investigation.
